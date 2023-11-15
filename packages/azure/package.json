@@ -1,0 +1,33 @@
+{
+  "name": "@atproto/azure",
+  "version": "0.1.1",
+  "license": "MIT",
+  "description": "Shared Azure cloud API helpers for atproto services",
+  "keywords": [
+    "atproto",
+    "azure"
+  ],
+  "homepage": "https://atproto.com",
+  "main": "src/index.ts",
+  "publishConfig": {
+    "main": "dist/index.js",
+    "types": "dist/src/index.d.ts"
+  },
+  "scripts": {
+    "build": "node ./build.js",
+    "postbuild": "tsc --build tsconfig.build.json",
+    "update-main-to-dist": "node ../../update-main-to-dist.js packages/azure"
+  },
+  "dependencies": {
+    "@atproto/crypto": "workspace:^",
+    "@atproto/repo": "workspace:^",
+    "@azure/arm-cdn": "^8.0.0",
+    "@azure/communication-email": "^1.0.0",
+    "@azure/identity": "^3.1.4",
+    "@azure/keyvault-keys": "^4.7.0",
+    "@azure/storage-blob": "^12.14.0",
+    "@noble/secp256k1": "^1.7.0",
+    "key-encoder": "^2.0.3",
+    "multiformats": "^9.9.0"
+  }
+}

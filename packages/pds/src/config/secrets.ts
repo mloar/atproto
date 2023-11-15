@@ -2,8 +2,23 @@ import { ServerEnvironment } from './env'
 
 export const envToSecrets = (env: ServerEnvironment): ServerSecrets => {
   let repoSigningKey: ServerSecrets['repoSigningKey']
-  if (env.repoSigningKeyKmsKeyId && env.repoSigningKeyK256PrivateKeyHex) {
-    throw new Error('Cannot set both kms & memory keys for repo signing key')
+
+  const repoSigningKeys = [
+    env.repoSigningKeyKeyVaultKeyId,
+    env.repoSigningKeyKmsKeyId,
+    env.repoSigningKeyK256PrivateKeyHex,
+  ].filter(key => !!key)
+  if (repoSigningKeys.length > 1) {
+    throw new Error('Cannot set multiple keys for repo signing key')
+  } else if (env.repoSigningKeyKeyVaultKeyId) {
+    if (!env.repoSigningKeyKeyVaultUrl) {
+      throw new Error('Missing vault URL for repo signing key')
+    }
+    repoSigningKey = {
+      provider: 'keyvault',
+      keyId: env.repoSigningKeyKeyVaultKeyId,
+      vaultUrl: env.repoSigningKeyKeyVaultUrl,
+    }
   } else if (env.repoSigningKeyKmsKeyId) {
     repoSigningKey = {
       provider: 'kms',
@@ -19,8 +34,22 @@ export const envToSecrets = (env: ServerEnvironment): ServerSecrets => {
   }
 
   let plcRotationKey: ServerSecrets['plcRotationKey']
-  if (env.plcRotationKeyKmsKeyId && env.plcRotationKeyK256PrivateKeyHex) {
-    throw new Error('Cannot set both kms & memory keys for plc rotation key')
+  const plcRotationKeys = [
+    env.plcRotationKeyKeyVaultKeyId,
+    env.plcRotationKeyKmsKeyId,
+    env.plcRotationKeyK256PrivateKeyHex,
+  ].filter(key => !!key)
+  if (plcRotationKeys.length > 1) {
+    throw new Error('Cannot set multiple keys for plc rotation key')
+  } else if (env.plcRotationKeyKeyVaultKeyId) {
+    if (!env.plcRotationKeyKeyVaultUrl) {
+      throw new Error('Missing vault URL for plc rotation key')
+    }
+    plcRotationKey = {
+      provider: 'keyvault',
+      keyId: env.plcRotationKeyKeyVaultKeyId,
+      vaultUrl: env.plcRotationKeyKeyVaultUrl,
+    }
   } else if (env.plcRotationKeyKmsKeyId) {
     plcRotationKey = {
       provider: 'kms',
@@ -59,8 +88,14 @@ export type ServerSecrets = {
   adminPassword: string
   moderatorPassword: string
   triagePassword: string
-  repoSigningKey: SigningKeyKms | SigningKeyMemory
-  plcRotationKey: SigningKeyKms | SigningKeyMemory
+  repoSigningKey: SigningKeyKeyVault | SigningKeyKms | SigningKeyMemory
+  plcRotationKey: SigningKeyKeyVault | SigningKeyKms | SigningKeyMemory
+}
+
+export type SigningKeyKeyVault = {
+  provider: 'keyvault'
+  keyId: string
+  vaultUrl: string
 }
 
 export type SigningKeyKms = {

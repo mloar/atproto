@@ -18,6 +18,7 @@ const {
   CloudfrontInvalidator,
   MultiImageInvalidator,
 } = require('@atproto/aws')
+const { CdnInvalidator } = require('@atproto/azure')
 const { Secp256k1Keypair } = require('@atproto/crypto')
 const {
   DatabaseCoordinator,
@@ -81,18 +82,22 @@ const main = async () => {
         pathPrefix: cfg.imgUriEndpoint && new URL(cfg.imgUriEndpoint).pathname,
       })
     : undefined
+  const cdnInvalidator = (env.cdnSubscription && env.cdnResourceGroup && env.cdnProfile && env.cdnEndpoint)
+    ? new CdnInvalidator({
+        new DefaultAzureCredential(),
+        subscriptionId: env.cdnSubscription,
+        resourceGroup: env.cdnResourceGroup,
+        profile: env.cdnProfile,
+        endpoint: env.cdnEndpoint,
+      })
+    : undefined
 
-  if (bunnyInvalidator && imgInvalidator) {
-    imgInvalidator = new MultiImageInvalidator([
-      bunnyInvalidator,
-      imgInvalidator,
-    ])
-  } else if (bunnyInvalidator) {
-    imgInvalidator = bunnyInvalidator
-  } else if (cfInvalidator) {
-    imgInvalidator = cfInvalidator
+  const invalidators = [bunnyInvalidator, cdnInvalidator, imgInvalidator].filter((inv) => !!inv)
+  if (invalidators.length > 1) {
+    imgInvalidator = new MultiImageInvalidator(invalidators)
+  } else if (invalidators.length === 1) {
+    imgInvalidator = invalidators[0]
   }
-
   const algos = env.feedPublisherDid ? makeAlgos(env.feedPublisherDid) : {}
   const bsky = BskyAppView.create({
     db,
@@ -160,6 +165,11 @@ const getEnv = () => ({
   bunnyAccessKey: process.env.BUNNY_ACCESS_KEY,
   cfDistributionId: process.env.CF_DISTRIBUTION_ID,
   feedPublisherDid: process.env.FEED_PUBLISHER_DID,
+  cloudProvider: process.env.CLOUD_PROVIDER,
+  cdnSubscription: process.env.CDN_SUBSCRIPTION,
+  cdnResourceGroup: process.env.CDN_RESOURCE_GROUP,
+  cdnProfile: process.env.CDN_PROFILE,
+  cdnEndpoint: process.env.CDN_ENDPOINT,
 })
 
 /**

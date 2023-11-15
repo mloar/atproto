@@ -3,6 +3,7 @@
   "private": true,
   "dependencies": {
     "@atproto/aws": "workspace:^",
+    "@atproto/azure": "workspace:^",
     "@atproto/crypto": "workspace:^",
     "@atproto/pds": "workspace:^",
     "dd-trace": "3.13.2"

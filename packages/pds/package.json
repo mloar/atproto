@@ -72,6 +72,7 @@
   },
   "devDependencies": {
     "@atproto/api": "workspace:^",
+    "@atproto/azure": "workspace:^",
     "@atproto/bsky": "workspace:^",
     "@atproto/dev-env": "workspace:^",
     "@atproto/lex-cli": "workspace:^",

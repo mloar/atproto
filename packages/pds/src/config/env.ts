@@ -22,6 +22,9 @@ export const readEnv = (): ServerEnvironment => {
     dbPostgresPoolIdleTimeoutMs: envInt('PDS_DB_POSTGRES_POOL_IDLE_TIMEOUT_MS'),
 
     // blobstore: one required
+    // azure
+    blobstoreConnectionString: envStr('PDS_BLOBSTORE_CONNECTION_STRING'),
+    blobstoreContainer: envStr('PDS_BLOBSTORE_CONTAINER'),
     // s3
     blobstoreS3Bucket: envStr('PDS_BLOBSTORE_S3_BUCKET'),
     blobstoreS3Region: envStr('PDS_BLOBSTORE_S3_REGION'),
@@ -49,6 +52,7 @@ export const readEnv = (): ServerEnvironment => {
     inviteEpoch: envInt('PDS_INVITE_EPOCH'),
 
     // email
+    emailConnectionString: envStr('PDS_EMAIL_CONNECTION_STRING'),
     emailSmtpUrl: envStr('PDS_EMAIL_SMTP_URL'),
     emailFromAddress: envStr('PDS_EMAIL_FROM_ADDRESS'),
     moderationEmailSmtpUrl: envStr('PDS_MODERATION_EMAIL_SMTP_URL'),
@@ -85,12 +89,18 @@ export const readEnv = (): ServerEnvironment => {
     triagePassword: envStr('PDS_TRIAGE_PASSWORD'),
 
     // keys: only one of each required
+    // keyvault
+    repoSigningKeyKeyVaultKeyId: envStr('PDS_REPO_SIGNING_KEY_KEY_VAULT_KEY_ID'),
+    repoSigningKeyKeyVaultUrl: envStr('PDS_REPO_SIGNING_KEY_KEY_VAULT_URL'),
     // kms
     repoSigningKeyKmsKeyId: envStr('PDS_REPO_SIGNING_KEY_KMS_KEY_ID'),
     // memory
     repoSigningKeyK256PrivateKeyHex: envStr(
       'PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX',
     ),
+    // keyvault
+    plcRotationKeyKeyVaultKeyId: envStr('PDS_PLC_ROTATION_KEY_KEY_VAULT_KEY_ID'),
+    plcRotationKeyKeyVaultUrl: envStr('PDS_PLC_ROTATION_KEY_KEY_VAULT_URL'),
     // kms
     plcRotationKeyKmsKeyId: envStr('PDS_PLC_ROTATION_KEY_KMS_KEY_ID'),
     // memory
@@ -119,6 +129,8 @@ export type ServerEnvironment = {
   dbPostgresPoolIdleTimeoutMs?: number
 
   // blobstore: one required
+  blobstoreConnectionString?: string
+  blobstoreContainer?: string
   blobstoreS3Bucket?: string
   blobstoreDiskLocation?: string
   blobstoreDiskTmpLocation?: string
@@ -146,8 +158,10 @@ export type ServerEnvironment = {
   inviteEpoch?: number
 
   // email
+  emailConnectionString?: string
   emailSmtpUrl?: string
   emailFromAddress?: string
+  moderationEmailConnectionString?: string
   moderationEmailSmtpUrl?: string
   moderationEmailAddress?: string
 
@@ -182,8 +196,12 @@ export type ServerEnvironment = {
   triagePassword?: string
 
   // keys
+  repoSigningKeyKeyVaultKeyId?: string
+  repoSigningKeyKeyVaultUrl?: string
   repoSigningKeyKmsKeyId?: string
   repoSigningKeyK256PrivateKeyHex?: string
+  plcRotationKeyKeyVaultKeyId?: string
+  plcRotationKeyKeyVaultUrl?: string
   plcRotationKeyKmsKeyId?: string
   plcRotationKeyK256PrivateKeyHex?: string
 }

@@ -5,11 +5,14 @@ import * as crypto from '@atproto/crypto'
 import { IdResolver } from '@atproto/identity'
 import { AtpAgent } from '@atproto/api'
 import { KmsKeypair, S3BlobStore } from '@atproto/aws'
+import { KeyVaultKeypair, AzureBlobStore } from '@atproto/azure'
 import { createServiceAuthHeaders } from '@atproto/xrpc-server'
 import { Database } from './db'
 import { ServerConfig, ServerSecrets } from './config'
 import { AuthVerifier } from './auth-verifier'
-import { ServerMailer } from './mailer'
+import { AcsTransport, ServerMailer } from './mailer'
+import type { Transporter } from 'nodemailer'
+import type SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { ModerationMailer } from './mailer/moderation'
 import { BlobStore } from '@atproto/repo'
 import { Services, createServices } from './services'
@@ -102,29 +105,38 @@ export class AppContext {
             poolIdleTimeoutMs: cfg.db.pool.idleTimeoutMs,
           })
     const blobstore =
-      cfg.blobstore.provider === 's3'
-        ? new S3BlobStore({
-            bucket: cfg.blobstore.bucket,
-            region: cfg.blobstore.region,
-            endpoint: cfg.blobstore.endpoint,
-            forcePathStyle: cfg.blobstore.forcePathStyle,
-            credentials: cfg.blobstore.credentials,
-          })
-        : await DiskBlobStore.create(
-            cfg.blobstore.location,
-            cfg.blobstore.tempLocation,
-          )
+      cfg.blobstore.provider === 'azure'
+        ? new AzureBlobStore({
+          connectionString: cfg.blobstore.connectionString,
+          container: cfg.blobstore.container,
+        })
+        : cfg.blobstore.provider === 's3'
+          ? new S3BlobStore({
+              bucket: cfg.blobstore.bucket,
+              region: cfg.blobstore.region,
+              endpoint: cfg.blobstore.endpoint,
+              forcePathStyle: cfg.blobstore.forcePathStyle,
+              credentials: cfg.blobstore.credentials,
+            })
+          : await DiskBlobStore.create(
+              cfg.blobstore.location,
+              cfg.blobstore.tempLocation,
+            )
 
     const mailTransport =
       cfg.email !== null
-        ? nodemailer.createTransport(cfg.email.smtpUrl)
+        ? cfg.email.connectionString !== undefined
+            ? (new AcsTransport(cfg.email) as unknown) as Transporter<SMTPTransport.SentMessageInfo>
+            : nodemailer.createTransport(cfg.email.smtpUrl)
         : nodemailer.createTransport({ jsonTransport: true })
 
     const mailer = new ServerMailer(mailTransport, cfg)
 
     const modMailTransport =
       cfg.moderationEmail !== null
-        ? nodemailer.createTransport(cfg.moderationEmail.smtpUrl)
+        ? cfg.moderationEmail.connectionString !== null
+          ? (new AcsTransport(cfg.moderationEmail) as unknown) as Transporter<SMTPTransport.SentMessageInfo>
+          : nodemailer.createTransport(cfg.moderationEmail.smtpUrl)
         : nodemailer.createTransport({ jsonTransport: true })
 
     const moderationMailer = new ModerationMailer(modMailTransport, cfg)
@@ -166,22 +178,32 @@ export class AppContext {
     })
 
     const repoSigningKey =
-      secrets.repoSigningKey.provider === 'kms'
-        ? await KmsKeypair.load({
+      secrets.repoSigningKey.provider === 'keyvault'
+        ? await KeyVaultKeypair.load({
             keyId: secrets.repoSigningKey.keyId,
+            vaultUrl: secrets.repoSigningKey.vaultUrl,
           })
-        : await crypto.Secp256k1Keypair.import(
-            secrets.repoSigningKey.privateKeyHex,
-          )
+        : secrets.repoSigningKey.provider === 'kms'
+            ? await KmsKeypair.load({
+                keyId: secrets.repoSigningKey.keyId,
+              })
+            : await crypto.Secp256k1Keypair.import(
+                secrets.repoSigningKey.privateKeyHex,
+              )
 
     const plcRotationKey =
-      secrets.plcRotationKey.provider === 'kms'
-        ? await KmsKeypair.load({
+      secrets.plcRotationKey.provider === 'keyvault'
+        ? await KeyVaultKeypair.load({
             keyId: secrets.plcRotationKey.keyId,
+            vaultUrl: secrets.plcRotationKey.vaultUrl,
           })
-        : await crypto.Secp256k1Keypair.import(
-            secrets.plcRotationKey.privateKeyHex,
-          )
+        : secrets.plcRotationKey.provider === 'kms'
+            ? await KmsKeypair.load({
+                keyId: secrets.plcRotationKey.keyId,
+              })
+            : await crypto.Secp256k1Keypair.import(
+                secrets.plcRotationKey.privateKeyHex,
+              )
 
     const services = createServices({
       repoSigningKey,

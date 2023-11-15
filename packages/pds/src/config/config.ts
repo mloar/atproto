@@ -72,6 +72,15 @@ export const envToCfg = (env: ServerEnvironment): ServerConfig => {
         secretAccessKey: env.blobstoreS3SecretAccessKey,
       }
     }
+  } else if (env.blobstoreConnectionString) {
+    if (!env.blobstoreContainer) {
+      throw new Error('Must specify blobstore container')
+    }
+    blobstoreCfg = {
+      provider: 'azure',
+      connectionString: env.blobstoreConnectionString,
+      container: env.blobstoreContainer,
+    }
   } else if (env.blobstoreDiskLocation) {
     blobstoreCfg = {
       provider: 'disk',
@@ -124,30 +133,32 @@ export const envToCfg = (env: ServerEnvironment): ServerConfig => {
         }
 
   let emailCfg: ServerConfig['email']
-  if (!env.emailFromAddress && !env.emailSmtpUrl) {
+  if (!env.emailFromAddress && !env.emailSmtpUrl && !env.emailConnectionString) {
     emailCfg = null
   } else {
-    if (!env.emailFromAddress || !env.emailSmtpUrl) {
+    if (!env.emailFromAddress || !(env.emailSmtpUrl || env.emailConnectionString)) {
       throw new Error(
-        'Partial email config, must set both emailFromAddress and emailSmtpUrl',
+        'Partial email config, must set both emailFromAddress and either emailSmtpUrl or emailConnectionString',
       )
     }
     emailCfg = {
+      connectionString: env.emailConnectionString,
       smtpUrl: env.emailSmtpUrl,
       fromAddress: env.emailFromAddress,
     }
   }
 
   let moderationEmailCfg: ServerConfig['moderationEmail']
-  if (!env.moderationEmailAddress && !env.moderationEmailSmtpUrl) {
+  if (!env.moderationEmailAddress && !env.moderationEmailSmtpUrl && !env.moderationEmailConnectionString) {
     moderationEmailCfg = null
   } else {
-    if (!env.moderationEmailAddress || !env.moderationEmailSmtpUrl) {
+    if (!env.moderationEmailAddress || !(env.moderationEmailSmtpUrl || env.moderationEmailConnectionString)) {
       throw new Error(
-        'Partial moderation email config, must set both emailFromAddress and emailSmtpUrl',
+        'Partial moderation email config, must set both emailFromAddress and either emailSmtpUrl or emailConnectionString',
       )
     }
     moderationEmailCfg = {
+      connectionString: env.moderationEmailConnectionString,
       smtpUrl: env.moderationEmailSmtpUrl,
       fromAddress: env.moderationEmailAddress,
     }
@@ -211,7 +222,7 @@ export const envToCfg = (env: ServerEnvironment): ServerConfig => {
 export type ServerConfig = {
   service: ServiceConfig
   db: SqliteConfig | PostgresConfig
-  blobstore: S3BlobstoreConfig | DiskBlobstoreConfig
+  blobstore: AzureBlobstoreConfig | S3BlobstoreConfig | DiskBlobstoreConfig
   identity: IdentityConfig
   invites: InvitesConfig
   email: EmailConfig | null
@@ -250,6 +261,12 @@ export type PostgresConfig = {
   migrationUrl: string
   pool: PostgresPoolConfig
   schema?: string
+}
+
+export type AzureBlobstoreConfig = {
+  provider: 'azure'
+  connectionString: string
+  container: string
 }
 
 export type S3BlobstoreConfig = {
@@ -292,7 +309,8 @@ export type InvitesConfig =
     }
 
 export type EmailConfig = {
-  smtpUrl: string
+  connectionString?: string
+  smtpUrl?: string
   fromAddress: string
 }
 
